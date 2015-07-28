@@ -43,12 +43,15 @@ Crafty.c("Collision", {
      * @trigger NewHitbox - when a new hitbox is assigned - Crafty.polygon
      *
      * @sign public this .collision([Crafty.polygon polygon])
-     * @param polygon - Crafty.polygon object that will act as the hit area.
+     * @param polygon - Optional Crafty.polygon object that will act as the hit area.
      *
-     * @sign public this .collision(x1, y1,.., xN, yN)
-     * @param point# - Array of x, y coordinate pairs to generate a hit area polygon.
+     * @sign public this .collision([Array coordinatePairs])
+     * @param coordinatePairs - Optional array of x, y coordinate pairs to generate a hit area polygon.
      *
-     * Constructor that takes a polygon or array of points to use as the hit area,
+     * @sign public this .collision([x1, y1,.., xN, yN])
+     * @param point# - Optional list of x, y coordinate pairs to generate a hit area polygon.
+     *
+     * Constructor that takes a polygon, an array of points or a list of points to use as the hit area,
      * with points being relative to the object's position in its unrotated state.
      *
      * The hit area must be a convex shape and not concave for collision detection to work properly.
@@ -57,13 +60,18 @@ Crafty.c("Collision", {
      *
      * If a hitbox is set that is outside of the bounds of the entity itself, there will be a small performance penalty as it is tracked separately.
      *
+     * In order for your custom hitbox to have any effect, you have to add the `Collision` component to all other entities this entity needs to collide with using this custom hitbox.
+     * On the contrary the collisions will be resolved using the default hitbox. See `.hit()` - `MBR` represents default hitbox collision, `SAT` represents custom hitbox collision.
+     *
      * @example
      * ~~~
      * Crafty.e("2D, Collision").collision(
-     *     new Crafty.polygon([50, 0, 100, 100, 0,1 00])
+     *     new Crafty.polygon([50, 0,  100, 100,  0, 100])
      * );
      *
-     * Crafty.e("2D, Collision").collision([50, 0, 100, 100, 0, 100]);
+     * Crafty.e("2D, Collision").collision([50, 0,  100, 100,  0, 100]);
+     *
+     * Crafty.e("2D, Collision").collision(50, 0,  100, 100,  0, 100);
      * ~~~
      *
      * @see Crafty.polygon
@@ -85,6 +93,11 @@ Crafty.c("Collision", {
                 //convert args to array to create polygon
                 var args = Array.prototype.slice.call(arguments, 0);
                 poly = new Crafty.polygon(args);
+            // Otherwise, we set the specified hitbox, converting from an array of points to a polygon if necessary
+            } else if (poly.constructor === Array) {
+                //Clone the array so we don't modify it for anything else that might be using it
+                poly = new Crafty.polygon(poly.slice());
+            // Otherwise, we set the specified hitbox
             } else {
                 //Clone the poly so we don't modify it for anything else that might be using it
                 poly = poly.clone();
@@ -240,6 +253,10 @@ Crafty.c("Collision", {
      *   - *SAT:* Collision between any two convex polygons. Used when both colliding entities have the `Collision` component applied to them.
      * - **overlap:** If SAT collision was used, this will signify the overlap percentage between the colliding entities.
      *
+     * Keep in mind that both entities need to have the `Collision` component, if you want to check for `SAT` (custom hitbox) collisions between them.
+     *
+     * If you want more fine-grained control consider using `Crafty.map.search()`.
+     *
      * @see 2D
      */
     hit: function (component) {
@@ -302,7 +319,8 @@ Crafty.c("Collision", {
      *
      * Creates an EnterFrame event calling .hit() each frame.  When a collision is detected the callback will be invoked.
      * Note that the `hit` callback will be invoked every frame the collision is active, not just the first time the collision occurs.
-     * If you want more fine-grained control consider using `.checkHits` or `.hit`.
+     *
+     * If you want more fine-grained control consider using `.checkHits()`, `.hit()` or even `Crafty.map.search()`.
      *
      * @see .checkHits
      * @see .hit
@@ -376,6 +394,8 @@ Crafty.c("Collision", {
      *
      * Calling this method more than once for the same component type will not
      * cause redundant hit checks.
+     *
+     * If you want more fine-grained control consider using `.hit()` or even `Crafty.map.search()`.
      *
      * @note Hit checks are performed upon entering each new frame (using
      * the *EnterFrame* event). It is entirely possible for object to move in
